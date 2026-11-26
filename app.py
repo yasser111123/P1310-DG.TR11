@@ -81,6 +81,14 @@ def clean_digits(val):
     return "".join(c for c in s if c.isdigit())
 
 
+def format_num_val(val):
+    if val is None or str(val).strip() == "":
+        return "-"
+    if isinstance(val, (int, float)) and float(val).is_integer():
+        return str(int(val))
+    return str(val).strip()
+
+
 def extract_ref_and_qty(line_text):
     tokens = re.findall(r"\d+[a-zA-Z0-9_-]*", line_text)
     if not tokens:
@@ -127,6 +135,8 @@ def load_synthese_data(excel_path):
 
     cond_col = col_map.get("Cond", 3)
     version_col = col_map.get("Version", 4)
+    wires_left_col = col_map.get("Wires Left", 10)
+    wires_right_col = col_map.get("Wires Right", 11)
     n_ref_col = col_map.get("N ref(s)", 18)
 
     ref_columns = []
@@ -143,18 +153,18 @@ def load_synthese_data(excel_path):
             })
 
     rows = []
+    wires_map = {}  # (cond, version) -> "left/right"
+
     for r in range(3, ws.max_row + 1):
         cond_val = ws.cell(r, cond_col).value
         if cond_val is None or str(cond_val).strip() == "":
             continue
 
         cond_str = str(cond_val).strip()
-        ver_raw = ws.cell(r, version_col).value
-        ver_str = (
-            str(int(ver_raw))
-            if isinstance(ver_raw, (int, float)) and float(ver_raw).is_integer()
-            else str(ver_raw or "").strip()
-        )
+        ver_str = format_num_val(ws.cell(r, version_col).value)
+        w_left = format_num_val(ws.cell(r, wires_left_col).value)
+        w_right = format_num_val(ws.cell(r, wires_right_col).value)
+        wires_map[(cond_str, ver_str)] = f"{w_left}/{w_right}"
 
         active_refs = []
         for rc in ref_columns:
@@ -171,11 +181,12 @@ def load_synthese_data(excel_path):
     return {
         "ref_columns": ref_columns,
         "rows": rows,
+        "wires_map": wires_map,
     }
 
 
 st.markdown('<div class="brand-title">DG.TR11 - SYNTHESE</div>', unsafe_allow_html=True)
-st.markdown('<div class="brand-sub">E01 • E02 • E03 ... VERSIONS & QUANTITY</div>', unsafe_allow_html=True)
+st.markdown('<div class="brand-sub">E01 • E02 • E03 ... VERSIONS, QUANTITY & WIRES</div>', unsafe_allow_html=True)
 
 st.markdown("### 📝 Kteb Reference o Quantity hna:")
 input_text = st.text_area(
@@ -194,7 +205,6 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
     else:
         lines = [ln.strip() for ln in input_text.strip().splitlines() if ln.strip()]
         matches_table = []
-        # Njm3o l-quantity b (Cond, Version) dyal les références li t-matched
         cond_ver_qty = {}
         total_qty = 0
 
@@ -266,10 +276,12 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
             cond_ver_qty.items(),
             key=lambda item: (item[0][0], int(item[0][1]) if item[0][1].isdigit() else 9999)
         ):
+            wires_lr = data["wires_map"].get((cond_name, ver_name), "-")
             summary_rows.append({
                 "Cond": cond_name,
                 "Version": ver_name,
                 "Total Qty": q_sum,
+                "Wires (L/R)": wires_lr,
             })
 
         if summary_rows:
@@ -277,12 +289,14 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
                 "Cond": "TOTAL",
                 "Version": "-",
                 "Total Qty": total_qty,
+                "Wires (L/R)": "-",
             })
         else:
             summary_rows.append({
                 "Cond": "Makayn walo",
                 "Version": "-",
                 "Total Qty": 0,
+                "Wires (L/R)": "-",
             })
 
         st.table(summary_rows)
