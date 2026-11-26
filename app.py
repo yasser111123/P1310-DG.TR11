@@ -297,7 +297,7 @@ if run_clicked:
 
         st.markdown("---")
         st.markdown("### 🎯 Détails dyal les références:")
-        st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Makayn hta match l-had E", "Cond": "-", "Version": "-", "Qty": 0}])
+        st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Null", "Cond": "-", "Version": "-", "Qty": 0}])
 
         st.markdown("### 📊 Hasila dyal Quantity b-`Cond` o `Version` (li fihom l-références):")
         summary_rows = []
@@ -322,7 +322,7 @@ if run_clicked:
             })
         else:
             summary_rows.append({
-                "Cond": "Makayn walo",
+                "Cond": "Null",
                 "Version": "-",
                 "Total Qty": 0,
                 "Wires (L/R)": "-",
