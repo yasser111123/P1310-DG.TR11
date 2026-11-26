@@ -3,7 +3,7 @@ import re
 import openpyxl
 import streamlit as st
 
-st.set_page_config(page_title="DG.TR11 - E01/E02/E03 PROG", page_icon="🚀", layout="centered")
+st.set_page_config(page_title="DG.TR11 - LEONI SYNTHESE", page_icon="🚀", layout="centered")
 
 st.markdown("""
     <style>
@@ -42,22 +42,27 @@ st.markdown("""
         box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
     }
 
-    .brand-title {
-        color: #ffffff;
-        font-family: 'Arial Black', sans-serif;
-        font-size: 28px;
-        font-weight: 900;
+    .brand-logo-container {
         text-align: center;
-        letter-spacing: 2px;
-        margin-bottom: 0px;
+        margin-bottom: 25px;
+    }
+    .brand-logo {
+        font-family: 'Arial Black', sans-serif;
+        font-size: 54px;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: 4px;
+        margin-bottom: -5px;
+    }
+    .brand-logo span {
+        color: #38bdf8; /* T-touch dyal l'blue ila bghiti */
     }
     .brand-sub {
         color: #94a3b8;
         font-family: 'Consolas', monospace;
         font-size: 13px;
         font-weight: bold;
-        text-align: center;
-        margin-bottom: 25px;
+        letter-spacing: 1.5px;
     }
 
     th {
@@ -78,7 +83,6 @@ st.markdown("""
 EXCEL_FILE = "DG.TR11.  Splices_X1310_HARN DASHBOARD DG(1).xlsx"
 SHEET_NAME = "Synthese"
 
-
 def clean_digits(val):
     if val is None:
         return ""
@@ -87,14 +91,12 @@ def clean_digits(val):
         s = s[:-1]
     return "".join(c for c in s if c.isdigit())
 
-
 def format_num_val(val):
     if val is None or str(val).strip() == "":
         return "-"
     if isinstance(val, (int, float)) and float(val).is_integer():
         return str(int(val))
     return str(val).strip()
-
 
 def extract_ref_and_qty(line_text):
     tokens = re.findall(r"\d+[a-zA-Z0-9_-]*", line_text)
@@ -121,7 +123,6 @@ def extract_ref_and_qty(line_text):
         qty_sum = 1
 
     return qty_sum, ref_token
-
 
 @st.cache_data
 def load_synthese_data(excel_path):
@@ -194,9 +195,8 @@ def load_synthese_data(excel_path):
         "cond_options": sorted(cond_options),
     }
 
-
-st.markdown('<div class="brand-title">DG.TR11 - SYNTHESE</div>', unsafe_allow_html=True)
-st.markdown('<div class="brand-sub">E01 • E02 • E03 ... VERSIONS, QUANTITY & WIRES</div>', unsafe_allow_html=True)
+# L-header dyal LEONI mzyan f-blasset l-9dima
+st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</div><div class="brand-sub">DG.TR11 - SYNTHESE</div></div>', unsafe_allow_html=True)
 
 data = load_synthese_data(EXCEL_FILE)
 cond_choices = data["cond_options"] if data else []
