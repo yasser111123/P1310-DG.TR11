@@ -20,6 +20,13 @@ st.markdown("""
         box-shadow: 0 0 8px rgba(59, 130, 246, 0.4) !important;
     }
 
+    div[data-baseweb="select"] > div {
+        background-color: #111827 !important;
+        color: #f3f4f6 !important;
+        border: 1px solid #1f2937 !important;
+        border-radius: 8px !important;
+    }
+
     div.stButton > button:first-child {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -153,7 +160,8 @@ def load_synthese_data(excel_path):
             })
 
     rows = []
-    wires_map = {}  # (cond, version) -> "left/right"
+    wires_map = {}
+    cond_options = set()
 
     for r in range(3, ws.max_row + 1):
         cond_val = ws.cell(r, cond_col).value
@@ -161,6 +169,7 @@ def load_synthese_data(excel_path):
             continue
 
         cond_str = str(cond_val).strip()
+        cond_options.add(cond_str)
         ver_str = format_num_val(ws.cell(r, version_col).value)
         w_left = format_num_val(ws.cell(r, wires_left_col).value)
         w_right = format_num_val(ws.cell(r, wires_right_col).value)
@@ -182,22 +191,37 @@ def load_synthese_data(excel_path):
         "ref_columns": ref_columns,
         "rows": rows,
         "wires_map": wires_map,
+        "cond_options": sorted(cond_options),
     }
 
 
 st.markdown('<div class="brand-title">DG.TR11 - SYNTHESE</div>', unsafe_allow_html=True)
 st.markdown('<div class="brand-sub">E01 • E02 • E03 ... VERSIONS, QUANTITY & WIRES</div>', unsafe_allow_html=True)
 
+data = load_synthese_data(EXCEL_FILE)
+cond_choices = data["cond_options"] if data else []
+
 st.markdown("### 📝 Kteb Reference o Quantity hna:")
 input_text = st.text_area(
     "",
     height=160,
-    placeholder="Mital:\n0122 126 21\n0501 189\n5117"
+    placeholder="Mital:\n0122 126\n0510 21"
 )
 
-if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
-    data = load_synthese_data(EXCEL_FILE)
+col_btn, col_filter = st.columns([1.2, 1])
 
+with col_btn:
+    run_clicked = st.button("🚀 Tla3 E01 / Versions o Hseb Quantity")
+
+with col_filter:
+    selected_conds = st.multiselect(
+        "Filter E (Cond)",
+        options=cond_choices,
+        placeholder="Khtar E aw khllih khawi",
+        label_visibility="collapsed"
+    )
+
+if run_clicked:
     if data is None:
         st.error(f"❌ L-fichier '{EXCEL_FILE}' ma l9inahch f nfs l-dossier dyal `app.py`.")
     elif not input_text.strip():
@@ -213,13 +237,14 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
             search_d = clean_digits(raw_ref)
 
             if not search_d:
-                matches_table.append({
-                    "Input": line,
-                    "Reference": "❌ Ghalt",
-                    "Cond": "-",
-                    "Version": "-",
-                    "Qty": qty,
-                })
+                if not selected_conds:
+                    matches_table.append({
+                        "Input": line,
+                        "Reference": "❌ Ghalt",
+                        "Cond": "-",
+                        "Version": "-",
+                        "Qty": qty,
+                    })
                 continue
 
             matched_cols = [
@@ -228,23 +253,27 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
             ]
 
             if not matched_cols:
-                matches_table.append({
-                    "Input": search_d,
-                    "Reference": f"❌ {search_d} ma kaynch",
-                    "Cond": "-",
-                    "Version": "-",
-                    "Qty": qty,
-                })
+                if not selected_conds:
+                    matches_table.append({
+                        "Input": search_d,
+                        "Reference": f"❌ {search_d} ma kaynch",
+                        "Cond": "-",
+                        "Version": "-",
+                        "Qty": qty,
+                    })
                 continue
 
             matched_col_indices = {mc["col"] for mc in matched_cols}
             found_any_row = False
 
             for row in data["rows"]:
+                cond_name = row["cond"]
+                if selected_conds and cond_name not in selected_conds:
+                    continue
+
                 for active in row["active_refs"]:
                     if active["col"] in matched_col_indices:
                         found_any_row = True
-                        cond_name = row["cond"]
                         ver_name = row["version"]
                         key = (cond_name, ver_name)
                         cond_ver_qty[key] = cond_ver_qty.get(key, 0) + qty
@@ -257,7 +286,7 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
                             "Qty": qty,
                         })
 
-            if not found_any_row:
+            if not found_any_row and not selected_conds:
                 matches_table.append({
                     "Input": search_d,
                     "Reference": matched_cols[0]["full_ref"],
@@ -268,7 +297,7 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
 
         st.markdown("---")
         st.markdown("### 🎯 Détails dyal les références:")
-        st.table(matches_table)
+        st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Makayn hta match l-had E", "Cond": "-", "Version": "-", "Qty": 0}])
 
         st.markdown("### 📊 Hasila dyal Quantity b-`Cond` o `Version` (li fihom l-références):")
         summary_rows = []
