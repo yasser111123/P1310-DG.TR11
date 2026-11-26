@@ -201,23 +201,23 @@ st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</di
 data = load_synthese_data(EXCEL_FILE)
 cond_choices = data["cond_options"] if data else []
 
-st.markdown("### 📝 Kteb Reference o Quantity hna:")
+st.markdown("### 📝 Write down the reference with quantity :")
 input_text = st.text_area(
     "",
     height=160,
-    placeholder="Mital:\n0122 126\n0510 21"
+    placeholder="Example :\n0122 126\n0510 21"
 )
 
 col_btn, col_filter = st.columns([1.2, 1])
 
 with col_btn:
-    run_clicked = st.button("🚀 Tla3 E01 / Versions o Hseb Quantity")
+    run_clicked = st.button("Press to Continue ")
 
 with col_filter:
     selected_conds = st.multiselect(
         "Filter E (Cond)",
         options=cond_choices,
-        placeholder="Khtar E aw khllih khawi",
+        placeholder="Select The EPS",
         label_visibility="collapsed"
     )
 
