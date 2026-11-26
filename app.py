@@ -13,7 +13,7 @@ if "light_mode" not in st.session_state:
 # Top bar sghira fiha Moon / Sun toggle button 3la limn
 _, top_btn_col = st.columns([6, 1.4])
 with top_btn_col:
-    toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
+    toggle_label = " Dark" if st.session_state.light_mode else " Light"
     if st.button(toggle_label, key="theme_toggle_btn"):
         st.session_state.light_mode = not st.session_state.light_mode
         st.rerun()
@@ -451,7 +451,7 @@ if run_clicked:
         _, det_btn_col = st.columns([2.2, 1.3])
         with det_btn_col:
             st.download_button(
-                label="📥 Export Details (.xlsx)",
+                label="📥 Export Details",
                 data=details_xlsx,
                 file_name="DG_TR11_References_Details.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -493,7 +493,7 @@ if run_clicked:
         _, sum_btn_col = st.columns([2.2, 1.3])
         with sum_btn_col:
             st.download_button(
-                label="📥 Export Versions & Qty (.xlsx)",
+                label="📥 Export Versions & Qty",
                 data=summary_xlsx,
                 file_name="DG_TR11_Versions_And_Quantity.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
