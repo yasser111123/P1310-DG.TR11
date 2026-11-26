@@ -8,7 +8,6 @@ st.set_page_config(page_title="P1310 PDB DG.TR11", page_icon="🇱", layout="cen
 if "light_mode" not in st.session_state:
     st.session_state.light_mode = False
 
-# Top bar sghira fiha Moon / Sun toggle button 3la limn
 top_spacer, top_btn_col = st.columns([6, 1.4])
 with top_btn_col:
     toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
@@ -103,7 +102,6 @@ st.markdown(f"""
         box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
     }}
 
-    /* Style khass b-Moon/Sun toggle button bach yji compact w mzyan */
     div[data-testid="stHorizontalBlock"]:first-of-type div.stButton > button:first-child {{
         background-color: {textarea_bg} !important;
         color: {text_color} !important;
@@ -287,7 +285,7 @@ with col_btn:
 
 with col_filter:
     selected_conds = st.multiselect(
-        "Filter E (Cond)",
+        "Filter EP",
         options=cond_choices,
         placeholder="Select The EPS",
         label_visibility="collapsed"
@@ -313,7 +311,7 @@ if run_clicked:
                     matches_table.append({
                         "Input": line,
                         "Reference": "❌ Ghalt",
-                        "Cond": "-",
+                        "EP": "-",
                         "Version": "-",
                         "Qty": qty,
                     })
@@ -329,7 +327,7 @@ if run_clicked:
                     matches_table.append({
                         "Input": search_d,
                         "Reference": f"❌ {search_d} ma kaynch",
-                        "Cond": "-",
+                        "EP": "-",
                         "Version": "-",
                         "Qty": qty,
                     })
@@ -353,7 +351,7 @@ if run_clicked:
                         matches_table.append({
                             "Input": search_d,
                             "Reference": active["full_ref"],
-                            "Cond": cond_name,
+                            "EP": cond_name,
                             "Version": ver_name,
                             "Qty": qty,
                         })
@@ -362,14 +360,14 @@ if run_clicked:
                 matches_table.append({
                     "Input": search_d,
                     "Reference": matched_cols[0]["full_ref"],
-                    "Cond": "Makayn f hta Cond",
+                    "EP": "Makayn f hta EP",
                     "Version": "-",
                     "Qty": qty,
                 })
 
         st.markdown("---")
         st.markdown("### 🎯 References Details:")
-        st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Null", "Cond": "-", "Version": "-", "Qty": 0}])
+        st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Null", "EP": "-", "Version": "-", "Qty": 0}])
 
         st.markdown("### 📊Versions And Quantity ")
         summary_rows = []
@@ -379,7 +377,7 @@ if run_clicked:
         ):
             wires_lr = data["wires_map"].get((cond_name, ver_name), "-")
             summary_rows.append({
-                "Cond": cond_name,
+                "EP": cond_name,
                 "Version": ver_name,
                 "Total Qty": q_sum,
                 "Wires (L/R)": wires_lr,
@@ -387,14 +385,14 @@ if run_clicked:
 
         if summary_rows:
             summary_rows.append({
-                "Cond": "TOTAL",
+                "EP": "TOTAL",
                 "Version": "-",
                 "Total Qty": total_qty,
                 "Wires (L/R)": "-",
             })
         else:
             summary_rows.append({
-                "Cond": "Null",
+                "EP": "Null",
                 "Version": "-",
                 "Total Qty": 0,
                 "Wires (L/R)": "-",
