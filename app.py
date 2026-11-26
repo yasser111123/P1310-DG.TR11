@@ -196,7 +196,7 @@ def load_synthese_data(excel_path):
     }
 
 # L-header dyal LEONI mzyan f-blasset l-9dima
-st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</div><div class="brand-sub">DG.TR11 - SYNTHESE</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</div><div class="brand-sub">P1310 PDB DG.TR11 </div></div>', unsafe_allow_html=True)
 
 data = load_synthese_data(EXCEL_FILE)
 cond_choices = data["cond_options"] if data else []
