@@ -3,7 +3,7 @@ import re
 import openpyxl
 import streamlit as st
 
-st.set_page_config(page_title="DAmn", page_icon="🚀", layout="centered")
+st.set_page_config(page_title="DG.TR11 - LEONI SYNTHESE", page_icon="🚀", layout="centered")
 
 st.markdown("""
     <style>
