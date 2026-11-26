@@ -10,7 +10,7 @@ if "light_mode" not in st.session_state:
 
 top_spacer, top_btn_col = st.columns([6, 1.4])
 with top_btn_col:
-    toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
+    toggle_label = " Dark" if st.session_state.light_mode else " Light"
     if st.button(toggle_label, key="theme_toggle_btn"):
         st.session_state.light_mode = not st.session_state.light_mode
         st.rerun()
