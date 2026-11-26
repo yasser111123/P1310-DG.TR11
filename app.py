@@ -8,9 +8,10 @@ st.set_page_config(page_title="P1310 PDB DG.TR11", page_icon="🇱", layout="cen
 if "light_mode" not in st.session_state:
     st.session_state.light_mode = False
 
-top_spacer, top_btn_col = st.columns([6, 1.4])
+# Top bar sghira fiha Moon / Sun toggle button 3la limn
+_, top_btn_col = st.columns([6, 1.4])
 with top_btn_col:
-    toggle_label = " Dark" if st.session_state.light_mode else " Light"
+    toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
     if st.button(toggle_label, key="theme_toggle_btn"):
         st.session_state.light_mode = not st.session_state.light_mode
         st.rerun()
@@ -22,9 +23,13 @@ if st.session_state.light_mode:
     textarea_bg = "#f8fafc"
     textarea_text = "#0f172a"
     textarea_border = "#cbd5e1"
+    placeholder_color = "#64748b"
     select_bg = "#f8fafc"
     select_text = "#0f172a"
     select_border = "#cbd5e1"
+    toggle_bg = "#f1f5f9"
+    toggle_text = "#0f172a"
+    toggle_border = "#cbd5e1"
     logo_color = "#13294b"
     sub_color = "#475569"
     th_bg = "#e2e8f0"
@@ -41,9 +46,13 @@ else:
     textarea_bg = "#111827"
     textarea_text = "#f3f4f6"
     textarea_border = "#1f2937"
+    placeholder_color = "#94a3b8"
     select_bg = "#111827"
     select_text = "#f3f4f6"
     select_border = "#1f2937"
+    toggle_bg = "#111827"
+    toggle_text = "#f3f4f6"
+    toggle_border = "#1f2937"
     logo_color = "#ffffff"
     sub_color = "#94a3b8"
     th_bg = "#1e293b"
@@ -74,6 +83,11 @@ st.markdown(f"""
         color: {textarea_text} !important;
         border: 1px solid {textarea_border} !important;
         font-family: 'Consolas', monospace !important;
+        font-size: 15px !important;
+    }}
+    .stTextArea textarea::placeholder {{
+        color: {placeholder_color} !important;
+        opacity: 1 !important;
     }}
     .stTextArea textarea:focus {{
         border-color: #3b82f6 !important;
@@ -87,6 +101,9 @@ st.markdown(f"""
         border-radius: 8px !important;
     }}
 
+    /* Primary action button ("Press to Continue") */
+    div.stButton > button[kind="secondary"],
+    div.stButton > button[kind="primary"],
     div.stButton > button:first-child {{
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -102,15 +119,16 @@ st.markdown(f"""
         box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
     }}
 
-    div[data-testid="stHorizontalBlock"]:first-of-type div.stButton > button:first-child {{
-        background-color: {textarea_bg} !important;
-        color: {text_color} !important;
-        border: 1px solid {textarea_border} !important;
+    /* Override ghir l-button dyal theme toggle f top row */
+    .st-key-theme_toggle_btn button {{
+        background-color: {toggle_bg} !important;
+        color: {toggle_text} !important;
+        border: 1px solid {toggle_border} !important;
         padding: 6px 10px !important;
         font-size: 13px !important;
         border-radius: 999px !important;
     }}
-    div[data-testid="stHorizontalBlock"]:first-of-type div.stButton > button:first-child:hover {{
+    .st-key-theme_toggle_btn button:hover {{
         border-color: #3b82f6 !important;
         box-shadow: none !important;
     }}
