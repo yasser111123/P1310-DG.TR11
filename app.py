@@ -1,6 +1,8 @@
+import io
 import os
 import re
 import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import streamlit as st
 
 st.set_page_config(page_title="P1310 PDB DG.TR11", page_icon="🇱", layout="centered")
@@ -11,7 +13,7 @@ if "light_mode" not in st.session_state:
 # Top bar sghira fiha Moon / Sun toggle button 3la limn
 _, top_btn_col = st.columns([6, 1.4])
 with top_btn_col:
-    toggle_label = " Dark" if st.session_state.light_mode else " Light"
+    toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
     if st.button(toggle_label, key="theme_toggle_btn"):
         st.session_state.light_mode = not st.session_state.light_mode
         st.rerun()
@@ -101,10 +103,10 @@ st.markdown(f"""
         border-radius: 8px !important;
     }}
 
-    /* Primary action button ("Press to Continue") */
     div.stButton > button[kind="secondary"],
     div.stButton > button[kind="primary"],
-    div.stButton > button:first-child {{
+    div.stButton > button:first-child,
+    div[data-testid="stDownloadButton"] > button {{
         background-color: #2563eb !important;
         color: #ffffff !important;
         font-weight: bold !important;
@@ -114,12 +116,12 @@ st.markdown(f"""
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
     }}
-    div.stButton > button:first-child:hover {{
+    div.stButton > button:first-child:hover,
+    div[data-testid="stDownloadButton"] > button:hover {{
         background-color: #1d4ed8 !important;
         box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
     }}
 
-    /* Override ghir l-button dyal theme toggle f top row */
     .st-key-theme_toggle_btn button {{
         background-color: {toggle_bg} !important;
         color: {toggle_text} !important;
@@ -172,6 +174,7 @@ st.markdown(f"""
 EXCEL_FILE = "DG.TR11.  Splices_X1310_HARN DASHBOARD DG(1).xlsx"
 SHEET_NAME = "Synthese"
 
+
 def clean_digits(val):
     if val is None:
         return ""
@@ -180,12 +183,14 @@ def clean_digits(val):
         s = s[:-1]
     return "".join(c for c in s if c.isdigit())
 
+
 def format_num_val(val):
     if val is None or str(val).strip() == "":
         return "-"
     if isinstance(val, (int, float)) and float(val).is_integer():
         return str(int(val))
     return str(val).strip()
+
 
 def extract_ref_and_qty(line_text):
     tokens = re.findall(r"\d+[a-zA-Z0-9_-]*", line_text)
@@ -212,6 +217,65 @@ def extract_ref_and_qty(line_text):
         qty_sum = 1
 
     return qty_sum, ref_token
+
+
+def build_export_xlsx(details_rows, summary_rows):
+    wb = openpyxl.Workbook()
+    header_fill = PatternFill(start_color="13294B", end_color="13294B", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    total_fill = PatternFill(start_color="E2E8F0", end_color="E2E8F0", fill_type="solid")
+    total_font = Font(name="Calibri", size=11, bold=True, color="0F172A")
+    body_font = Font(name="Calibri", size=11, color="0F172A")
+    thin_side = Side(border_style="thin", color="CBD5E1")
+    cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+
+    def write_sheet(ws, rows_data):
+        if not rows_data:
+            ws.append(["No Data"])
+            return
+
+        headers = list(rows_data[0].keys())
+        ws.append(headers)
+
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(1, col_idx)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = cell_border
+        ws.row_dimensions[1].height = 24
+
+        for r_idx, row_dict in enumerate(rows_data, start=2):
+            vals = [row_dict.get(h, "") for h in headers]
+            ws.append(vals)
+            is_total = str(vals[0]).strip().upper() == "TOTAL"
+            ws.row_dimensions[r_idx].height = 20
+
+            for c_idx in range(1, len(headers) + 1):
+                c_cell = ws.cell(r_idx, c_idx)
+                c_cell.font = total_font if is_total else body_font
+                if is_total:
+                    c_cell.fill = total_fill
+                c_cell.alignment = Alignment(horizontal="center", vertical="center")
+                c_cell.border = cell_border
+
+        for col_cells in ws.columns:
+            col_letter = openpyxl.utils.get_column_letter(col_cells[0].column)
+            max_len = max(len(str(cell.value or "")) for cell in col_cells)
+            ws.column_dimensions[col_letter].width = max(max_len + 6, 14)
+
+    ws_details = wb.active
+    ws_details.title = "References Details"
+    write_sheet(ws_details, details_rows)
+
+    ws_summary = wb.create_sheet(title="Versions And Quantity")
+    write_sheet(ws_summary, summary_rows)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
 
 @st.cache_data
 def load_synthese_data(excel_path):
@@ -283,6 +347,7 @@ def load_synthese_data(excel_path):
         "wires_map": wires_map,
         "cond_options": sorted(cond_options),
     }
+
 
 st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</div><div class="brand-sub">P1310 PDB DG.TR11 </div></div>', unsafe_allow_html=True)
 
@@ -385,7 +450,8 @@ if run_clicked:
 
         st.markdown("---")
         st.markdown("### 🎯 References Details:")
-        st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Null", "EP": "-", "Version": "-", "Qty": 0}])
+        display_details = matches_table if matches_table else [{"Input": "-", "Reference": "Null", "EP": "-", "Version": "-", "Qty": 0}]
+        st.table(display_details)
 
         st.markdown("### 📊Versions And Quantity ")
         summary_rows = []
@@ -417,3 +483,11 @@ if run_clicked:
             })
 
         st.table(summary_rows)
+
+        xlsx_bytes = build_export_xlsx(display_details, summary_rows)
+        st.download_button(
+            label="📥 Export Excel (.xlsx)",
+            data=xlsx_bytes,
+            file_name="DG_TR11_Synthese_Export.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
