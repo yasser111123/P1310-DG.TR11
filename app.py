@@ -219,8 +219,11 @@ def extract_ref_and_qty(line_text):
     return qty_sum, ref_token
 
 
-def build_export_xlsx(details_rows, summary_rows):
+def build_single_table_xlsx(sheet_title, rows_data):
     wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = sheet_title
+
     header_fill = PatternFill(start_color="13294B", end_color="13294B", fill_type="solid")
     header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
     total_fill = PatternFill(start_color="E2E8F0", end_color="E2E8F0", fill_type="solid")
@@ -229,11 +232,9 @@ def build_export_xlsx(details_rows, summary_rows):
     thin_side = Side(border_style="thin", color="CBD5E1")
     cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
-    def write_sheet(ws, rows_data):
-        if not rows_data:
-            ws.append(["No Data"])
-            return
-
+    if not rows_data:
+        ws.append(["No Data"])
+    else:
         headers = list(rows_data[0].keys())
         ws.append(headers)
 
@@ -263,13 +264,6 @@ def build_export_xlsx(details_rows, summary_rows):
             col_letter = openpyxl.utils.get_column_letter(col_cells[0].column)
             max_len = max(len(str(cell.value or "")) for cell in col_cells)
             ws.column_dimensions[col_letter].width = max(max_len + 6, 14)
-
-    ws_details = wb.active
-    ws_details.title = "References Details"
-    write_sheet(ws_details, details_rows)
-
-    ws_summary = wb.create_sheet(title="Versions And Quantity")
-    write_sheet(ws_summary, summary_rows)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -453,6 +447,17 @@ if run_clicked:
         display_details = matches_table if matches_table else [{"Input": "-", "Reference": "Null", "EP": "-", "Version": "-", "Qty": 0}]
         st.table(display_details)
 
+        details_xlsx = build_single_table_xlsx("References Details", display_details)
+        _, det_btn_col = st.columns([2.2, 1.3])
+        with det_btn_col:
+            st.download_button(
+                label="📥 Export Details (.xlsx)",
+                data=details_xlsx,
+                file_name="DG_TR11_References_Details.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="export_details_xlsx",
+            )
+
         st.markdown("### 📊Versions And Quantity ")
         summary_rows = []
         for (cond_name, ver_name), q_sum in sorted(
@@ -484,10 +489,13 @@ if run_clicked:
 
         st.table(summary_rows)
 
-        xlsx_bytes = build_export_xlsx(display_details, summary_rows)
-        st.download_button(
-            label="📥 Export Excel (.xlsx)",
-            data=xlsx_bytes,
-            file_name="DG_TR11_Synthese_Export.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        summary_xlsx = build_single_table_xlsx("Versions And Quantity", summary_rows)
+        _, sum_btn_col = st.columns([2.2, 1.3])
+        with sum_btn_col:
+            st.download_button(
+                label="📥 Export Versions & Qty (.xlsx)",
+                data=summary_xlsx,
+                file_name="DG_TR11_Versions_And_Quantity.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="export_summary_xlsx",
+            )
