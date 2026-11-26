@@ -5,29 +5,90 @@ import streamlit as st
 
 st.set_page_config(page_title="P1310 PDB DG.TR11", page_icon="🇱", layout="centered")
 
-st.markdown("""
-    <style>
-    .main { background-color: #0b0f19; color: #e2e8f0; }
+if "light_mode" not in st.session_state:
+    st.session_state.light_mode = False
 
-    .stTextArea textarea {
-        background-color: #111827 !important;
-        color: #f3f4f6 !important;
-        border: 1px solid #1f2937 !important;
+# Top bar sghira fiha Moon / Sun toggle button 3la limn
+top_spacer, top_btn_col = st.columns([6, 1.4])
+with top_btn_col:
+    toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
+    if st.button(toggle_label, key="theme_toggle_btn"):
+        st.session_state.light_mode = not st.session_state.light_mode
+        st.rerun()
+
+if st.session_state.light_mode:
+    bg_color = "#ffffff"
+    text_color = "#0f172a"
+    heading_color = "#0f172a"
+    textarea_bg = "#f8fafc"
+    textarea_text = "#0f172a"
+    textarea_border = "#cbd5e1"
+    select_bg = "#f8fafc"
+    select_text = "#0f172a"
+    select_border = "#cbd5e1"
+    logo_color = "#13294b"
+    sub_color = "#475569"
+    th_bg = "#e2e8f0"
+    th_color = "#13294b"
+    th_border = "#cbd5e1"
+    td_bg = "#ffffff"
+    td_color = "#1e293b"
+    td_border = "#e2e8f0"
+    hr_color = "#e2e8f0"
+else:
+    bg_color = "#0b0f19"
+    text_color = "#e2e8f0"
+    heading_color = "#e2e8f0"
+    textarea_bg = "#111827"
+    textarea_text = "#f3f4f6"
+    textarea_border = "#1f2937"
+    select_bg = "#111827"
+    select_text = "#f3f4f6"
+    select_border = "#1f2937"
+    logo_color = "#ffffff"
+    sub_color = "#94a3b8"
+    th_bg = "#1e293b"
+    th_color = "#38bdf8"
+    th_border = "#334155"
+    td_bg = "#0f172a"
+    td_color = "#cbd5e1"
+    td_border = "#1e293b"
+    hr_color = "#1f2937"
+
+st.markdown(f"""
+    <style>
+    .stApp, .main, [data-testid="stAppViewContainer"] {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+
+    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown {{
+        color: {heading_color} !important;
+    }}
+
+    hr {{
+        border-color: {hr_color} !important;
+    }}
+
+    .stTextArea textarea {{
+        background-color: {textarea_bg} !important;
+        color: {textarea_text} !important;
+        border: 1px solid {textarea_border} !important;
         font-family: 'Consolas', monospace !important;
-    }
-    .stTextArea textarea:focus {
+    }}
+    .stTextArea textarea:focus {{
         border-color: #3b82f6 !important;
         box-shadow: 0 0 8px rgba(59, 130, 246, 0.4) !important;
-    }
+    }}
 
-    div[data-baseweb="select"] > div {
-        background-color: #111827 !important;
-        color: #f3f4f6 !important;
-        border: 1px solid #1f2937 !important;
+    div[data-baseweb="select"] > div {{
+        background-color: {select_bg} !important;
+        color: {select_text} !important;
+        border: 1px solid {select_border} !important;
         border-radius: 8px !important;
-    }
+    }}
 
-    div.stButton > button:first-child {
+    div.stButton > button:first-child {{
         background-color: #2563eb !important;
         color: #ffffff !important;
         font-weight: bold !important;
@@ -36,47 +97,59 @@ st.markdown("""
         padding: 12px !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
-    }
-    div.stButton > button:first-child:hover {
+    }}
+    div.stButton > button:first-child:hover {{
         background-color: #1d4ed8 !important;
         box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
-    }
+    }}
 
-    .brand-logo-container {
+    /* Style khass b-Moon/Sun toggle button bach yji compact w mzyan */
+    div[data-testid="stHorizontalBlock"]:first-of-type div.stButton > button:first-child {{
+        background-color: {textarea_bg} !important;
+        color: {text_color} !important;
+        border: 1px solid {textarea_border} !important;
+        padding: 6px 10px !important;
+        font-size: 13px !important;
+        border-radius: 999px !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:first-of-type div.stButton > button:first-child:hover {{
+        border-color: #3b82f6 !important;
+        box-shadow: none !important;
+    }}
+
+    .brand-logo-container {{
         text-align: center;
         margin-bottom: 25px;
-    }
-    .brand-logo {
+    }}
+    .brand-logo {{
         font-family: 'Arial Black', sans-serif;
         font-size: 54px;
         font-weight: 900;
-        color: #ffffff;
+        color: {logo_color} !important;
         letter-spacing: 4px;
         margin-bottom: -5px;
-    }
-    .brand-logo span {
-        color: #38bdf8; /* T-touch dyal l'blue ila bghiti */
-    }
-    .brand-sub {
-        color: #94a3b8;
+        transition: color 0.25s ease;
+    }}
+    .brand-sub {{
+        color: {sub_color} !important;
         font-family: 'Consolas', monospace;
         font-size: 13px;
         font-weight: bold;
         letter-spacing: 1.5px;
-    }
+    }}
 
-    th {
-        background-color: #1e293b !important;
-        color: #38bdf8 !important;
+    th {{
+        background-color: {th_bg} !important;
+        color: {th_color} !important;
         text-align: center !important;
-        border-bottom: 2px solid #334155 !important;
-    }
-    td {
-        background-color: #0f172a !important;
-        color: #cbd5e1 !important;
+        border-bottom: 2px solid {th_border} !important;
+    }}
+    td {{
+        background-color: {td_bg} !important;
+        color: {td_color} !important;
         text-align: center !important;
-        border-bottom: 1px solid #1e293b !important;
-    }
+        border-bottom: 1px solid {td_border} !important;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -195,7 +268,6 @@ def load_synthese_data(excel_path):
         "cond_options": sorted(cond_options),
     }
 
-# L-header dyal LEONI mzyan f-blasset l-9dima
 st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</div><div class="brand-sub">P1310 PDB DG.TR11 </div></div>', unsafe_allow_html=True)
 
 data = load_synthese_data(EXCEL_FILE)
