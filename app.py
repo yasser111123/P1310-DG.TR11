@@ -126,7 +126,6 @@ def load_synthese_data(excel_path):
             col_map[str(header_val).strip()] = c
 
     cond_col = col_map.get("Cond", 3)
-    splice_col = col_map.get("Splice", 2)
     version_col = col_map.get("Version", 4)
     n_ref_col = col_map.get("N ref(s)", 18)
 
@@ -144,25 +143,18 @@ def load_synthese_data(excel_path):
             })
 
     rows = []
-    all_conds = {}
-
     for r in range(3, ws.max_row + 1):
         cond_val = ws.cell(r, cond_col).value
         if cond_val is None or str(cond_val).strip() == "":
             continue
 
         cond_str = str(cond_val).strip()
-        splice_str = str(ws.cell(r, splice_col).value or "").strip()
         ver_raw = ws.cell(r, version_col).value
         ver_str = (
             str(int(ver_raw))
             if isinstance(ver_raw, (int, float)) and float(ver_raw).is_integer()
             else str(ver_raw or "").strip()
         )
-
-        all_conds.setdefault(cond_str, set())
-        if ver_str:
-            all_conds[cond_str].add(ver_str)
 
         active_refs = []
         for rc in ref_columns:
@@ -172,7 +164,6 @@ def load_synthese_data(excel_path):
 
         rows.append({
             "cond": cond_str,
-            "splice": splice_str,
             "version": ver_str,
             "active_refs": active_refs,
         })
@@ -180,7 +171,6 @@ def load_synthese_data(excel_path):
     return {
         "ref_columns": ref_columns,
         "rows": rows,
-        "all_conds": all_conds,
     }
 
 
@@ -191,7 +181,7 @@ st.markdown("### 📝 Kteb Reference o Quantity hna:")
 input_text = st.text_area(
     "",
     height=160,
-    placeholder="Mital:\n5117\n21 147 5117\n10 4733"
+    placeholder="Mital:\n0122 126 21\n0501 189\n5117"
 )
 
 if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
@@ -204,8 +194,9 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
     else:
         lines = [ln.strip() for ln in input_text.strip().splitlines() if ln.strip()]
         matches_table = []
-        cond_qty_totals = {}
-        total_matched_qty = 0
+        # Njm3o l-quantity b (Cond, Version) dyal les références li t-matched
+        cond_ver_qty = {}
+        total_qty = 0
 
         for line in lines:
             qty, raw_ref = extract_ref_and_qty(line)
@@ -216,7 +207,6 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
                     "Input": line,
                     "Reference": "❌ Ghalt",
                     "Cond": "-",
-                    "Splice": "-",
                     "Version": "-",
                     "Qty": qty,
                 })
@@ -232,7 +222,6 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
                     "Input": search_d,
                     "Reference": f"❌ {search_d} ma kaynch",
                     "Cond": "-",
-                    "Splice": "-",
                     "Version": "-",
                     "Qty": qty,
                 })
@@ -246,14 +235,15 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
                     if active["col"] in matched_col_indices:
                         found_any_row = True
                         cond_name = row["cond"]
-                        cond_qty_totals[cond_name] = cond_qty_totals.get(cond_name, 0) + qty
-                        total_matched_qty += qty
+                        ver_name = row["version"]
+                        key = (cond_name, ver_name)
+                        cond_ver_qty[key] = cond_ver_qty.get(key, 0) + qty
+                        total_qty += qty
                         matches_table.append({
                             "Input": search_d,
                             "Reference": active["full_ref"],
                             "Cond": cond_name,
-                            "Splice": row["splice"],
-                            "Version": row["version"],
+                            "Version": ver_name,
                             "Qty": qty,
                         })
 
@@ -262,33 +252,37 @@ if st.button("🚀 Tla3 E01 / Versions o Hseb Quantity"):
                     "Input": search_d,
                     "Reference": matched_cols[0]["full_ref"],
                     "Cond": "Makayn f hta Cond",
-                    "Splice": "-",
                     "Version": "-",
                     "Qty": qty,
                 })
 
         st.markdown("---")
-        st.markdown("### 🎯 Les `Cond` (E01, E02...) o `Version` li fihom had Reference:")
+        st.markdown("### 🎯 Détails dyal les références:")
         st.table(matches_table)
 
-        st.markdown("### 📊 Hasila dyal Quantity b-kol `Cond` (`E01`, `E02`, `E03`...):")
-        all_e_summary = []
-        for cond_name in sorted(data["all_conds"].keys()):
-            vers_sorted = sorted(
-                data["all_conds"][cond_name],
-                key=lambda x: int(x) if x.isdigit() else 9999
-            )
-            qty_for_cond = cond_qty_totals.get(cond_name, 0)
-            all_e_summary.append({
+        st.markdown("### 📊 Hasila dyal Quantity b-`Cond` o `Version` (li fihom l-références):")
+        summary_rows = []
+        for (cond_name, ver_name), q_sum in sorted(
+            cond_ver_qty.items(),
+            key=lambda item: (item[0][0], int(item[0][1]) if item[0][1].isdigit() else 9999)
+        ):
+            summary_rows.append({
                 "Cond": cond_name,
-                "Versions": ", ".join(vers_sorted) if vers_sorted else "-",
-                "Total Qty": qty_for_cond,
+                "Version": ver_name,
+                "Total Qty": q_sum,
             })
 
-        all_e_summary.append({
-            "Cond": "TOTAL",
-            "Versions": "-",
-            "Total Qty": total_matched_qty,
-        })
+        if summary_rows:
+            summary_rows.append({
+                "Cond": "TOTAL",
+                "Version": "-",
+                "Total Qty": total_qty,
+            })
+        else:
+            summary_rows.append({
+                "Cond": "Makayn walo",
+                "Version": "-",
+                "Total Qty": 0,
+            })
 
-        st.table(all_e_summary)
+        st.table(summary_rows)
