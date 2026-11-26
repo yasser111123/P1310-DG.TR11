@@ -296,10 +296,10 @@ if run_clicked:
                 })
 
         st.markdown("---")
-        st.markdown("### 🎯 Détails dyal les références:")
+        st.markdown("### 🎯 References Details:")
         st.table(matches_table if matches_table else [{"Input": "-", "Reference": "Null", "Cond": "-", "Version": "-", "Qty": 0}])
 
-        st.markdown("### 📊 Hasila dyal Quantity b-`Cond` o `Version` (li fihom l-références):")
+        st.markdown("### 📊Versions And Quantity ")
         summary_rows = []
         for (cond_name, ver_name), q_sum in sorted(
             cond_ver_qty.items(),
