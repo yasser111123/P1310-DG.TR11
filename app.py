@@ -273,7 +273,7 @@ def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None, title
     thin_side = Side(border_style="thin", color="CBD5E1")
     cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
-    num_cols = max(len(rows_data[0].keys()) if rows_data else 2, 2)
+    num_cols = max(len(rows_data[0].keys()) if rows_data else 4, 4)
     current_row = 1
 
     if title_banner:
@@ -288,18 +288,24 @@ def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None, title
         current_row += 1
 
     if top_banner_lines:
-        for label_txt, val_txt in top_banner_lines:
-            c_lbl = ws.cell(current_row, 1, label_txt)
-            c_lbl.fill = banner_label_fill
-            c_lbl.font = banner_label_font
-            c_lbl.alignment = Alignment(horizontal="center", vertical="center")
-            c_lbl.border = cell_border
+        for row_pairs in top_banner_lines:
+            # row_pairs yqder ykoun tuple wahd (lbl, val) aw jouj tuples ((lbl1, val1), (lbl2, val2))
+            pairs = row_pairs if (isinstance(row_pairs[0], (list, tuple))) else [row_pairs]
+            col_cursor = 1
+            for label_txt, val_txt in pairs:
+                c_lbl = ws.cell(current_row, col_cursor, label_txt)
+                c_lbl.fill = banner_label_fill
+                c_lbl.font = banner_label_font
+                c_lbl.alignment = Alignment(horizontal="center", vertical="center")
+                c_lbl.border = cell_border
 
-            c_val = ws.cell(current_row, 2, val_txt)
-            c_val.fill = banner_val_fill
-            c_val.font = banner_val_font
-            c_val.alignment = Alignment(horizontal="center", vertical="center")
-            c_val.border = cell_border
+                c_val = ws.cell(current_row, col_cursor + 1, val_txt)
+                c_val.fill = banner_val_fill
+                c_val.font = banner_val_font
+                c_val.alignment = Alignment(horizontal="center", vertical="center")
+                c_val.border = cell_border
+
+                col_cursor += 2
 
             ws.row_dimensions[current_row].height = 20
             current_row += 1
@@ -490,6 +496,20 @@ def compute_matches(lines, selected_conds, data):
     return matches_table, cond_ver_qty, total_qty
 
 
+def extract_entered_refs_display(lines, data):
+    refs_out = []
+    for line in lines:
+        _, raw_ref = extract_ref_and_qty(line)
+        search_d = clean_digits(raw_ref)
+        if not search_d:
+            continue
+        matched = [rc["full_ref"] for rc in data["ref_columns"] if rc["digits"].endswith(search_d) or search_d.endswith(rc["digits"])]
+        chosen = matched[0] if matched else search_d
+        if chosen not in refs_out:
+            refs_out.append(chosen)
+    return " / ".join(refs_out) if refs_out else "-"
+
+
 def render_main_window(window_id, data, cond_choices):
     st.markdown("### 📝 Write down the reference with quantity :")
     input_text = st.text_area(
@@ -649,13 +669,16 @@ def render_main_window(window_id, data, cond_choices):
 
         st.table(summary_rows)
 
-        export_date_str = datetime.now().strftime("%d/%m/%Y")
+        now_dt = datetime.now()
+        export_date_str = now_dt.strftime("%d/%m/%Y")
+        export_time_ms = now_dt.strftime("%M:%S")
         carousel_val = selected_carousel if selected_carousel else "All Carousels"
         shift_val = selected_shift if selected_shift else "All Shifts"
+        ref_val = extract_entered_refs_display(lines, data)
 
         top_banner = [
-            ("Carousel / Shift", f"{carousel_val} / {shift_val}"),
-            ("Date", export_date_str),
+            (("Carousel / Shift", f"{carousel_val} / {shift_val}"), ("Ref", ref_val)),
+            (("Date", export_date_str), ("Time", export_time_ms)),
         ]
 
         summary_xlsx = build_single_table_xlsx(
