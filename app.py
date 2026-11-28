@@ -289,7 +289,6 @@ def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None, title
 
     if top_banner_lines:
         for row_pairs in top_banner_lines:
-            # row_pairs yqder ykoun tuple wahd (lbl, val) aw jouj tuples ((lbl1, val1), (lbl2, val2))
             pairs = row_pairs if (isinstance(row_pairs[0], (list, tuple))) else [row_pairs]
             col_cursor = 1
             for label_txt, val_txt in pairs:
@@ -671,14 +670,14 @@ def render_main_window(window_id, data, cond_choices):
 
         now_dt = datetime.now()
         export_date_str = now_dt.strftime("%d/%m/%Y")
-        export_time_ms = now_dt.strftime("%M:%S")
+        export_time_hms = now_dt.strftime("%H:%M:%S")
         carousel_val = selected_carousel if selected_carousel else "All Carousels"
         shift_val = selected_shift if selected_shift else "All Shifts"
         ref_val = extract_entered_refs_display(lines, data)
 
         top_banner = [
             (("Carousel / Shift", f"{carousel_val} / {shift_val}"), ("Ref", ref_val)),
-            (("Date", export_date_str), ("Time", export_time_ms)),
+            (("Date", export_date_str), ("Time", export_time_hms)),
         ]
 
         summary_xlsx = build_single_table_xlsx(
