@@ -466,33 +466,15 @@ def render_main_window(window_id, data, cond_choices):
             key=f"filter_ep_{window_id}",
         )
 
-    result_key = f"result_cache_{window_id}"
-    if result_key not in st.session_state:
-        st.session_state[result_key] = None
-
-    if run_clicked:
-        if data is None:
-            st.error(f"❌ L-fichier '{EXCEL_FILE}' ma l9inahch f nfs l-dossier dyal `app.py`.")
-            return
-        if not input_text.strip():
-            st.warning("⚠️ Kteb chi reference bhal `5117` ba3da.")
-            return
-
-        lines = [ln.strip() for ln in input_text.strip().splitlines() if ln.strip()]
-        matches_table, cond_ver_qty, total_qty = compute_matches(lines, selected_conds, data)
-        st.session_state[result_key] = {
-            "matches_table": matches_table,
-            "cond_ver_qty": cond_ver_qty,
-            "total_qty": total_qty,
-        }
-
-    cached = st.session_state[result_key]
-    if cached is None or data is None:
+    if not run_clicked or data is None:
         return
 
-    matches_table = cached["matches_table"]
-    cond_ver_qty = cached["cond_ver_qty"]
-    total_qty = cached["total_qty"]
+    if not input_text.strip():
+        st.warning("⚠️ Kteb chi reference bhal `5117` ba3da.")
+        return
+
+    lines = [ln.strip() for ln in input_text.strip().splitlines() if ln.strip()]
+    matches_table, cond_ver_qty, total_qty = compute_matches(lines, selected_conds, data)
 
     st.markdown("---")
 
@@ -555,75 +537,41 @@ def render_main_window(window_id, data, cond_choices):
             )
 
     else:
-        # main 2: ghir Versions And Quantity b-EP, Version, Total Qty, Status, Delivered
+        # main 2: normal table b-EP, Version, Total Qty, Status (khawi), Delivered (khawi)
         st.markdown("### 📊Versions And Quantity ")
-        sorted_items = sorted(
+        summary_rows = []
+        for (cond_name, ver_name), q_sum in sorted(
             cond_ver_qty.items(),
             key=lambda item: (item[0][0], int(item[0][1]) if item[0][1].isdigit() else 9999)
-        )
-
-        if sorted_items:
-            base_rows = [
-                {
-                    "EP": cond_name,
-                    "Version": ver_name,
-                    "Total Qty": q_sum,
-                    "Status": "Pending",
-                    "Delivered": False,
-                }
-                for (cond_name, ver_name), q_sum in sorted_items
-            ]
-
-            edited_df = st.data_editor(
-                base_rows,
-                column_config={
-                    "EP": st.column_config.TextColumn("EP", disabled=True),
-                    "Version": st.column_config.TextColumn("Version", disabled=True),
-                    "Total Qty": st.column_config.NumberColumn("Total Qty", disabled=True),
-                    "Status": st.column_config.TextColumn("Status"),
-                    "Delivered": st.column_config.CheckboxColumn("Delivered"),
-                },
-                hide_index=True,
-                use_container_width=True,
-                key=f"main2_editor_{window_id}",
-            )
-
-            export_rows = []
-            for r_item in edited_df:
-                export_rows.append({
-                    "EP": r_item.get("EP", "-"),
-                    "Version": r_item.get("Version", "-"),
-                    "Total Qty": r_item.get("Total Qty", 0),
-                    "Status": r_item.get("Status", ""),
-                    "Delivered": "Yes" if r_item.get("Delivered") else "No",
-                })
-
-            export_rows.append({
-                "EP": "TOTAL",
-                "Version": "-",
-                "Total Qty": total_qty,
-                "Status": "-",
-                "Delivered": "-",
+        ):
+            summary_rows.append({
+                "EP": cond_name,
+                "Version": ver_name,
+                "Total Qty": q_sum,
+                "Status": "",
+                "Delivered": "",
             })
 
-            st.table([{
+        if summary_rows:
+            summary_rows.append({
                 "EP": "TOTAL",
                 "Version": "-",
                 "Total Qty": total_qty,
-                "Status": "-",
-                "Delivered": "-",
-            }])
+                "Status": "",
+                "Delivered": "",
+            })
         else:
-            export_rows = [{
+            summary_rows.append({
                 "EP": "Null",
                 "Version": "-",
                 "Total Qty": 0,
-                "Status": "-",
-                "Delivered": "-",
-            }]
-            st.table(export_rows)
+                "Status": "",
+                "Delivered": "",
+            })
 
-        summary_xlsx = build_single_table_xlsx("Versions And Quantity", export_rows)
+        st.table(summary_rows)
+
+        summary_xlsx = build_single_table_xlsx("Versions And Quantity", summary_rows)
         sum_btn_col, _ = st.columns([1.2, 1])
         with sum_btn_col:
             st.download_button(
@@ -650,6 +598,8 @@ with win_col2:
 st.markdown("---")
 
 data = load_synthese_data(EXCEL_FILE)
-cond_choices = data["cond_options"] if data else []
-
-render_main_window(st.session_state.active_main, data, cond_choices)
+if data is None:
+    st.error(f"❌ L-fichier '{EXCEL_FILE}' ma l9inahch f nfs l-dossier dyal `app.py`.")
+else:
+    cond_choices = data["cond_options"]
+    render_main_window(st.session_state.active_main, data, cond_choices)
