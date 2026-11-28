@@ -10,10 +10,13 @@ st.set_page_config(page_title="P1310 PDB DG.TR11", page_icon="🇱", layout="cen
 if "light_mode" not in st.session_state:
     st.session_state.light_mode = False
 
+if "active_main" not in st.session_state:
+    st.session_state.active_main = "main 1"
+
 # Top bar sghira fiha Moon / Sun toggle button 3la limn
 _, top_btn_col = st.columns([6, 1.4])
 with top_btn_col:
-    toggle_label = " 🌙 " if st.session_state.light_mode else " ☀️ "
+    toggle_label = "🌙 Dark" if st.session_state.light_mode else "☀️ Light"
     if st.button(toggle_label, key="theme_toggle_btn"):
         st.session_state.light_mode = not st.session_state.light_mode
         st.rerun()
@@ -32,6 +35,9 @@ if st.session_state.light_mode:
     toggle_bg = "#f1f5f9"
     toggle_text = "#0f172a"
     toggle_border = "#cbd5e1"
+    tab_inactive_bg = "#f8fafc"
+    tab_inactive_text = "#334155"
+    tab_border = "#cbd5e1"
     logo_color = "#13294b"
     sub_color = "#475569"
     th_bg = "#e2e8f0"
@@ -55,6 +61,9 @@ else:
     toggle_bg = "#111827"
     toggle_text = "#f3f4f6"
     toggle_border = "#1f2937"
+    tab_inactive_bg = "#111827"
+    tab_inactive_text = "#cbd5e1"
+    tab_border = "#1f2937"
     logo_color = "#ffffff"
     sub_color = "#94a3b8"
     th_bg = "#1e293b"
@@ -114,7 +123,7 @@ st.markdown(f"""
         border: none !important;
         padding: 12px !important;
         border-radius: 8px !important;
-        transition: all 0.3s ease !important;
+        transition: all 0.2s ease !important;
     }}
     div.stButton > button:first-child:hover,
     div[data-testid="stDownloadButton"] > button:hover {{
@@ -122,6 +131,7 @@ st.markdown(f"""
         box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
     }}
 
+    /* Override ghir l-button dyal theme toggle f top row */
     .st-key-theme_toggle_btn button {{
         background-color: {toggle_bg} !important;
         color: {toggle_text} !important;
@@ -135,9 +145,27 @@ st.markdown(f"""
         box-shadow: none !important;
     }}
 
+    /* Style dyal main 1 / main 2 switcher buttons taht logo */
+    .st-key-win_tab_main_1 button,
+    .st-key-win_tab_main_2 button {{
+        background-color: {tab_inactive_bg} !important;
+        color: {tab_inactive_text} !important;
+        border: 1px solid {tab_border} !important;
+        padding: 10px 14px !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
+    }}
+
+    .st-key-win_tab_{"main_1" if st.session_state.active_main == "main 1" else "main_2"} button {{
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border: 1px solid #2563eb !important;
+    }}
+
     .brand-logo-container {{
         text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 16px;
     }}
     .brand-logo {{
         font-family: 'Arial Black', sans-serif;
@@ -173,6 +201,10 @@ st.markdown(f"""
 
 EXCEL_FILE = "DG.TR11.  Splices_X1310_HARN DASHBOARD DG(1).xlsx"
 SHEET_NAME = "Synthese"
+
+# Smiyat dyal les windows (bdelhom hna mnin tbghi t3tihom smiyat dyalhom)
+MAIN_1_LABEL = "main 1 ⌄"
+MAIN_2_LABEL = "main 2 ⌄"
 
 
 def clean_digits(val):
@@ -343,159 +375,178 @@ def load_synthese_data(excel_path):
     }
 
 
+def render_main_window(window_id, data, cond_choices):
+    st.markdown("### 📝 Write down the reference with quantity :")
+    input_text = st.text_area(
+        "",
+        height=160,
+        placeholder="Example :\n0122 126\n0510 21",
+        key=f"input_text_{window_id}",
+    )
+
+    col_btn, col_filter = st.columns([1.2, 1])
+
+    with col_btn:
+        run_clicked = st.button("Press to Continue ", key=f"run_btn_{window_id}")
+
+    with col_filter:
+        selected_conds = st.multiselect(
+            "Filter EP",
+            options=cond_choices,
+            placeholder="Select The EPS",
+            label_visibility="collapsed",
+            key=f"filter_ep_{window_id}",
+        )
+
+    if run_clicked:
+        if data is None:
+            st.error(f"❌ L-fichier '{EXCEL_FILE}' ma l9inahch f nfs l-dossier dyal `app.py`.")
+        elif not input_text.strip():
+            st.warning("⚠️ Kteb chi reference bhal `5117` ba3da.")
+        else:
+            lines = [ln.strip() for ln in input_text.strip().splitlines() if ln.strip()]
+            matches_table = []
+            cond_ver_qty = {}
+            total_qty = 0
+
+            for line in lines:
+                qty, raw_ref = extract_ref_and_qty(line)
+                search_d = clean_digits(raw_ref)
+
+                if not search_d:
+                    if not selected_conds:
+                        matches_table.append({
+                            "Input": line,
+                            "Reference": "❌ Ghalt",
+                            "EP": "-",
+                            "Version": "-",
+                            "Qty": qty,
+                        })
+                    continue
+
+                matched_cols = [
+                    rc for rc in data["ref_columns"]
+                    if rc["digits"].endswith(search_d) or search_d.endswith(rc["digits"])
+                ]
+
+                if not matched_cols:
+                    if not selected_conds:
+                        matches_table.append({
+                            "Input": search_d,
+                            "Reference": f"❌ {search_d} ma kaynch",
+                            "EP": "-",
+                            "Version": "-",
+                            "Qty": qty,
+                        })
+                    continue
+
+                matched_col_indices = {mc["col"] for mc in matched_cols}
+                found_any_row = False
+
+                for row in data["rows"]:
+                    cond_name = row["cond"]
+                    if selected_conds and cond_name not in selected_conds:
+                        continue
+
+                    for active in row["active_refs"]:
+                        if active["col"] in matched_col_indices:
+                            found_any_row = True
+                            ver_name = row["version"]
+                            key = (cond_name, ver_name)
+                            cond_ver_qty[key] = cond_ver_qty.get(key, 0) + qty
+                            total_qty += qty
+                            matches_table.append({
+                                "Input": search_d,
+                                "Reference": active["full_ref"],
+                                "EP": cond_name,
+                                "Version": ver_name,
+                                "Qty": qty,
+                            })
+
+                if not found_any_row and not selected_conds:
+                    matches_table.append({
+                        "Input": search_d,
+                        "Reference": matched_cols[0]["full_ref"],
+                        "EP": "Makayn f hta EP",
+                        "Version": "-",
+                        "Qty": qty,
+                    })
+
+            st.markdown("---")
+            st.markdown("### 🎯 References Details:")
+            display_details = matches_table if matches_table else [{"Input": "-", "Reference": "Null", "EP": "-", "Version": "-", "Qty": 0}]
+            st.table(display_details)
+
+            details_xlsx = build_single_table_xlsx("References Details", display_details)
+            det_btn_col, _ = st.columns([1.2, 1])
+            with det_btn_col:
+                st.download_button(
+                    label="📥 Export Details (.xlsx)",
+                    data=details_xlsx,
+                    file_name=f"DG_TR11_{window_id.replace(' ', '_')}_References_Details.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key=f"export_details_xlsx_{window_id}",
+                )
+
+            st.markdown("### 📊Versions And Quantity ")
+            summary_rows = []
+            for (cond_name, ver_name), q_sum in sorted(
+                cond_ver_qty.items(),
+                key=lambda item: (item[0][0], int(item[0][1]) if item[0][1].isdigit() else 9999)
+            ):
+                wires_lr = data["wires_map"].get((cond_name, ver_name), "-")
+                summary_rows.append({
+                    "EP": cond_name,
+                    "Version": ver_name,
+                    "Total Qty": q_sum,
+                    "Wires (L/R)": wires_lr,
+                })
+
+            if summary_rows:
+                summary_rows.append({
+                    "EP": "TOTAL",
+                    "Version": "-",
+                    "Total Qty": total_qty,
+                    "Wires (L/R)": "-",
+                })
+            else:
+                summary_rows.append({
+                    "EP": "Null",
+                    "Version": "-",
+                    "Total Qty": 0,
+                    "Wires (L/R)": "-",
+                })
+
+            st.table(summary_rows)
+
+            summary_xlsx = build_single_table_xlsx("Versions And Quantity", summary_rows)
+            sum_btn_col, _ = st.columns([1.2, 1])
+            with sum_btn_col:
+                st.download_button(
+                    label="📥 Export Versions & Qty (.xlsx)",
+                    data=summary_xlsx,
+                    file_name=f"DG_TR11_{window_id.replace(' ', '_')}_Versions_And_Quantity.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key=f"export_summary_xlsx_{window_id}",
+                )
+
+
 st.markdown('<div class="brand-logo-container"><div class="brand-logo">LEONI</div><div class="brand-sub">P1310 PDB DG.TR11 </div></div>', unsafe_allow_html=True)
+
+# Two windows under logo: main 1 w main 2
+win_col1, win_col2 = st.columns(2)
+with win_col1:
+    if st.button(MAIN_1_LABEL, key="win_tab_main_1"):
+        st.session_state.active_main = "main 1"
+        st.rerun()
+with win_col2:
+    if st.button(MAIN_2_LABEL, key="win_tab_main_2"):
+        st.session_state.active_main = "main 2"
+        st.rerun()
+
+st.markdown("---")
 
 data = load_synthese_data(EXCEL_FILE)
 cond_choices = data["cond_options"] if data else []
 
-st.markdown("### 📝 Write down the reference with quantity :")
-input_text = st.text_area(
-    "",
-    height=160,
-    placeholder="Example :\n0122 126\n0510 21"
-)
-
-col_btn, col_filter = st.columns([1.2, 1])
-
-with col_btn:
-    run_clicked = st.button("Press to Continue ")
-
-with col_filter:
-    selected_conds = st.multiselect(
-        "Filter EP",
-        options=cond_choices,
-        placeholder="Select The EPS",
-        label_visibility="collapsed"
-    )
-
-if run_clicked:
-    if data is None:
-        st.error(f"❌ L-fichier '{EXCEL_FILE}' ma l9inahch f nfs l-dossier dyal `app.py`.")
-    elif not input_text.strip():
-        st.warning("⚠️ Kteb chi reference bhal `5117` ba3da.")
-    else:
-        lines = [ln.strip() for ln in input_text.strip().splitlines() if ln.strip()]
-        matches_table = []
-        cond_ver_qty = {}
-        total_qty = 0
-
-        for line in lines:
-            qty, raw_ref = extract_ref_and_qty(line)
-            search_d = clean_digits(raw_ref)
-
-            if not search_d:
-                if not selected_conds:
-                    matches_table.append({
-                        "Input": line,
-                        "Reference": "❌ Ghalt",
-                        "EP": "-",
-                        "Version": "-",
-                        "Qty": qty,
-                    })
-                continue
-
-            matched_cols = [
-                rc for rc in data["ref_columns"]
-                if rc["digits"].endswith(search_d) or search_d.endswith(rc["digits"])
-            ]
-
-            if not matched_cols:
-                if not selected_conds:
-                    matches_table.append({
-                        "Input": search_d,
-                        "Reference": f"❌ {search_d} ma kaynch",
-                        "EP": "-",
-                        "Version": "-",
-                        "Qty": qty,
-                    })
-                continue
-
-            matched_col_indices = {mc["col"] for mc in matched_cols}
-            found_any_row = False
-
-            for row in data["rows"]:
-                cond_name = row["cond"]
-                if selected_conds and cond_name not in selected_conds:
-                    continue
-
-                for active in row["active_refs"]:
-                    if active["col"] in matched_col_indices:
-                        found_any_row = True
-                        ver_name = row["version"]
-                        key = (cond_name, ver_name)
-                        cond_ver_qty[key] = cond_ver_qty.get(key, 0) + qty
-                        total_qty += qty
-                        matches_table.append({
-                            "Input": search_d,
-                            "Reference": active["full_ref"],
-                            "EP": cond_name,
-                            "Version": ver_name,
-                            "Qty": qty,
-                        })
-
-            if not found_any_row and not selected_conds:
-                matches_table.append({
-                    "Input": search_d,
-                    "Reference": matched_cols[0]["full_ref"],
-                    "EP": "Makayn f hta EP",
-                    "Version": "-",
-                    "Qty": qty,
-                })
-
-        st.markdown("---")
-        st.markdown("### 🎯 References Details:")
-        display_details = matches_table if matches_table else [{"Input": "-", "Reference": "Null", "EP": "-", "Version": "-", "Qty": 0}]
-        st.table(display_details)
-
-        details_xlsx = build_single_table_xlsx("References Details", display_details)
-        det_btn_col, _ = st.columns([1.2, 1])
-        with det_btn_col:
-            st.download_button(
-                label="📥 Export Details (.xlsx)",
-                data=details_xlsx,
-                file_name="DG_TR11_References_Details.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="export_details_xlsx",
-            )
-
-        st.markdown("### 📊Versions And Quantity ")
-        summary_rows = []
-        for (cond_name, ver_name), q_sum in sorted(
-            cond_ver_qty.items(),
-            key=lambda item: (item[0][0], int(item[0][1]) if item[0][1].isdigit() else 9999)
-        ):
-            wires_lr = data["wires_map"].get((cond_name, ver_name), "-")
-            summary_rows.append({
-                "EP": cond_name,
-                "Version": ver_name,
-                "Total Qty": q_sum,
-                "Wires (L/R)": wires_lr,
-            })
-
-        if summary_rows:
-            summary_rows.append({
-                "EP": "TOTAL",
-                "Version": "-",
-                "Total Qty": total_qty,
-                "Wires (L/R)": "-",
-            })
-        else:
-            summary_rows.append({
-                "EP": "Null",
-                "Version": "-",
-                "Total Qty": 0,
-                "Wires (L/R)": "-",
-            })
-
-        st.table(summary_rows)
-
-        summary_xlsx = build_single_table_xlsx("Versions And Quantity", summary_rows)
-        sum_btn_col, _ = st.columns([1.2, 1])
-        with sum_btn_col:
-            st.download_button(
-                label="📥 Export Versions & Qty (.xlsx)",
-                data=summary_xlsx,
-                file_name="DG_TR11_Versions_And_Quantity.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="export_summary_xlsx",
-            )
+render_main_window(st.session_state.active_main, data, cond_choices)
