@@ -1,3 +1,4 @@
+from datetime import datetime
 import io
 import os
 import re
@@ -251,10 +252,15 @@ def extract_ref_and_qty(line_text):
     return qty_sum, ref_token
 
 
-def build_single_table_xlsx(sheet_title, rows_data):
+def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = sheet_title
+
+    banner_label_fill = PatternFill(start_color="E2E8F0", end_color="E2E8F0", fill_type="solid")
+    banner_label_font = Font(name="Calibri", size=11, bold=True, color="13294B")
+    banner_val_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+    banner_val_font = Font(name="Calibri", size=11, bold=True, color="0F172A")
 
     header_fill = PatternFill(start_color="13294B", end_color="13294B", fill_type="solid")
     header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
@@ -264,38 +270,61 @@ def build_single_table_xlsx(sheet_title, rows_data):
     thin_side = Side(border_style="thin", color="CBD5E1")
     cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
+    current_row = 1
+
+    if top_banner_lines:
+        for label_txt, val_txt in top_banner_lines:
+            c_lbl = ws.cell(current_row, 1, label_txt)
+            c_lbl.fill = banner_label_fill
+            c_lbl.font = banner_label_font
+            c_lbl.alignment = Alignment(horizontal="center", vertical="center")
+            c_lbl.border = cell_border
+
+            c_val = ws.cell(current_row, 2, val_txt)
+            c_val.fill = banner_val_fill
+            c_val.font = banner_val_font
+            c_val.alignment = Alignment(horizontal="center", vertical="center")
+            c_val.border = cell_border
+
+            ws.row_dimensions[current_row].height = 20
+            current_row += 1
+
+        ws.row_dimensions[current_row].height = 10
+        current_row += 1
+
     if not rows_data:
-        ws.append(["No Data"])
+        ws.cell(current_row, 1, "No Data")
     else:
         headers = list(rows_data[0].keys())
-        ws.append(headers)
+        header_row_idx = current_row
 
-        for col_idx in range(1, len(headers) + 1):
-            cell = ws.cell(1, col_idx)
+        for col_idx, h_name in enumerate(headers, start=1):
+            cell = ws.cell(header_row_idx, col_idx, h_name)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center", vertical="center")
             cell.border = cell_border
-        ws.row_dimensions[1].height = 24
+        ws.row_dimensions[header_row_idx].height = 24
+        current_row += 1
 
-        for r_idx, row_dict in enumerate(rows_data, start=2):
+        for row_dict in rows_data:
             vals = [row_dict.get(h, "") for h in headers]
-            ws.append(vals)
             is_total = str(vals[0]).strip().upper() == "TOTAL"
-            ws.row_dimensions[r_idx].height = 20
+            ws.row_dimensions[current_row].height = 20
 
-            for c_idx in range(1, len(headers) + 1):
-                c_cell = ws.cell(r_idx, c_idx)
+            for c_idx, val in enumerate(vals, start=1):
+                c_cell = ws.cell(current_row, c_idx, val)
                 c_cell.font = total_font if is_total else body_font
                 if is_total:
                     c_cell.fill = total_fill
                 c_cell.alignment = Alignment(horizontal="center", vertical="center")
                 c_cell.border = cell_border
+            current_row += 1
 
         for col_cells in ws.columns:
             col_letter = openpyxl.utils.get_column_letter(col_cells[0].column)
             max_len = max(len(str(cell.value or "")) for cell in col_cells)
-            ws.column_dimensions[col_letter].width = max(max_len + 6, 14)
+            ws.column_dimensions[col_letter].width = max(max_len + 6, 15)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -605,14 +634,20 @@ def render_main_window(window_id, data, cond_choices):
 
         st.table(summary_rows)
 
-        xlsx_rows = []
-        for r_item in summary_rows:
-            row_copy = dict(r_item)
-            row_copy["Carousel"] = selected_carousel if selected_carousel != "All Carousels" else ""
-            row_copy["Shift"] = selected_shift if selected_shift != "All Shifts" else ""
-            xlsx_rows.append(row_copy)
+        export_date_str = datetime.now().strftime("%d/%m/%Y")
+        carousel_val = selected_carousel if selected_carousel else "All Carousels"
+        shift_val = selected_shift if selected_shift else "All Shifts"
 
-        summary_xlsx = build_single_table_xlsx("Versions And Quantity", xlsx_rows)
+        top_banner = [
+            ("Carousel / Shift", f"{carousel_val} / {shift_val}"),
+            ("Date", export_date_str),
+        ]
+
+        summary_xlsx = build_single_table_xlsx(
+            "Versions And Quantity",
+            summary_rows,
+            top_banner_lines=top_banner,
+        )
         sum_btn_col, _ = st.columns([1.2, 1])
         with sum_btn_col:
             st.download_button(
