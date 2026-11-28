@@ -252,10 +252,13 @@ def extract_ref_and_qty(line_text):
     return qty_sum, ref_token
 
 
-def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None):
+def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None, title_banner=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = sheet_title
+
+    title_fill = PatternFill(start_color="13294B", end_color="13294B", fill_type="solid")
+    title_font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
 
     banner_label_fill = PatternFill(start_color="E2E8F0", end_color="E2E8F0", fill_type="solid")
     banner_label_font = Font(name="Calibri", size=11, bold=True, color="13294B")
@@ -270,7 +273,19 @@ def build_single_table_xlsx(sheet_title, rows_data, top_banner_lines=None):
     thin_side = Side(border_style="thin", color="CBD5E1")
     cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
+    num_cols = max(len(rows_data[0].keys()) if rows_data else 2, 2)
     current_row = 1
+
+    if title_banner:
+        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=num_cols)
+        t_cell = ws.cell(current_row, 1, str(title_banner).upper())
+        t_cell.fill = title_fill
+        t_cell.font = title_font
+        t_cell.alignment = Alignment(horizontal="center", vertical="center")
+        for c_i in range(1, num_cols + 1):
+            ws.cell(current_row, c_i).border = cell_border
+        ws.row_dimensions[current_row].height = 28
+        current_row += 1
 
     if top_banner_lines:
         for label_txt, val_txt in top_banner_lines:
@@ -647,6 +662,7 @@ def render_main_window(window_id, data, cond_choices):
             "Versions And Quantity",
             summary_rows,
             top_banner_lines=top_banner,
+            title_banner="P1310 PDB DG",
         )
         sum_btn_col, _ = st.columns([1.2, 1])
         with sum_btn_col:
