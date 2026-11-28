@@ -203,6 +203,9 @@ SHEET_NAME = "Synthese"
 MAIN_1_LABEL = "main 1 ⌄"
 MAIN_2_LABEL = "main 2 ⌄"
 
+CAROUSEL_OPTIONS = ["CAROUSEL 1", "CAROUSEL 2", "CAROUSEL 3", "CAROUSEL 4"]
+SHIFT_OPTIONS = ["Matin", "AM"]
+
 
 def clean_digits(val):
     if val is None:
@@ -452,19 +455,51 @@ def render_main_window(window_id, data, cond_choices):
         key=f"input_text_{window_id}",
     )
 
-    col_btn, col_filter = st.columns([1.2, 1])
+    selected_carousel = None
+    selected_shift = None
 
-    with col_btn:
-        run_clicked = st.button("Press to Continue ", key=f"run_btn_{window_id}")
+    if window_id == "main 1":
+        col_btn, col_filter = st.columns([1.2, 1])
+        with col_btn:
+            run_clicked = st.button("Press to Continue ", key=f"run_btn_{window_id}")
+        with col_filter:
+            selected_conds = st.multiselect(
+                "Filter EP",
+                options=cond_choices,
+                placeholder="Select The EPS",
+                label_visibility="collapsed",
+                key=f"filter_ep_{window_id}",
+            )
+    else:
+        row1_btn, row1_ep = st.columns([1.2, 1])
+        with row1_btn:
+            run_clicked = st.button("Press to Continue ", key=f"run_btn_{window_id}")
+        with row1_ep:
+            selected_conds = st.multiselect(
+                "Filter EP",
+                options=cond_choices,
+                placeholder="Select The EPS",
+                label_visibility="collapsed",
+                key=f"filter_ep_{window_id}",
+            )
 
-    with col_filter:
-        selected_conds = st.multiselect(
-            "Filter EP",
-            options=cond_choices,
-            placeholder="Select The EPS",
-            label_visibility="collapsed",
-            key=f"filter_ep_{window_id}",
-        )
+        row2_carousel, row2_shift = st.columns([1, 1])
+        with row2_carousel:
+            selected_carousel = st.selectbox(
+                "Select Carousel",
+                options=["All Carousels"] + CAROUSEL_OPTIONS,
+                index=0,
+                label_visibility="collapsed",
+                key=f"select_carousel_{window_id}",
+            )
+        with row2_shift:
+            selected_shift = st.selectbox(
+                "Select Shift",
+                options=["All Shifts"] + SHIFT_OPTIONS,
+                index=0,
+                label_visibility="collapsed",
+                key=f"select_shift_{window_id}",
+            )
 
     if not run_clicked or data is None:
         return
@@ -537,7 +572,6 @@ def render_main_window(window_id, data, cond_choices):
             )
 
     else:
-        # main 2: normal table b-EP, Version, Total Qty, Status (khawi), Delivered (khawi)
         st.markdown("### 📊Versions And Quantity ")
         summary_rows = []
         for (cond_name, ver_name), q_sum in sorted(
@@ -571,7 +605,14 @@ def render_main_window(window_id, data, cond_choices):
 
         st.table(summary_rows)
 
-        summary_xlsx = build_single_table_xlsx("Versions And Quantity", summary_rows)
+        xlsx_rows = []
+        for r_item in summary_rows:
+            row_copy = dict(r_item)
+            row_copy["Carousel"] = selected_carousel if selected_carousel != "All Carousels" else ""
+            row_copy["Shift"] = selected_shift if selected_shift != "All Shifts" else ""
+            xlsx_rows.append(row_copy)
+
+        summary_xlsx = build_single_table_xlsx("Versions And Quantity", xlsx_rows)
         sum_btn_col, _ = st.columns([1.2, 1])
         with sum_btn_col:
             st.download_button(
